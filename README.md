@@ -4,7 +4,7 @@ Libris is a web application with a React/Vite/Tailwind frontend, a Java Spring B
 
 ## Easiest local setup
 
-Install Node.js, Java 17+, and Maven. Docker/PostgreSQL is not required for local development because the backend uses file-backed H2 by default.
+Install Node.js, Java 25+, and Maven. Docker/PostgreSQL is not required for local development because the backend uses file-backed H2 by default.
 
 Run the Java API in one PowerShell window:
 

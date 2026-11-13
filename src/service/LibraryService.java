@@ -17,6 +17,7 @@ public final class LibraryService {
 
     public void seedDefaults() {
         users.save(new Admin("admin", "admin123"));
+        users.save(new Member("member", "member123"));
         addBook("El Filibusterismo", "Jose Rizal", "Historical Fiction", 1891);
         addBook("Noli Me Tangere", "Jose Rizal", "Historical Fiction", 1887);
         addBook("Pride and Prejudice", "Jane Austen", "Historical Romance", 1813);
