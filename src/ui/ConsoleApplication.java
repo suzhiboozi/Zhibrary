@@ -13,12 +13,12 @@ public final class ConsoleApplication {
         service.seedDefaults();
         System.out.println("=== Libris OOP Edition ===");
         System.out.println("Default admin: admin / admin123");
-        while (true) {
+        while (input.hasNextLine()) {
             System.out.println("\n1. List books  2. Search  3. Register  4. Login  5. Exit");
             String choice = input.nextLine().trim();
             if (choice.equals("1")) service.catalog().forEach(this::printBook);
             else if (choice.equals("2")) service.search(ask("Search title")).forEach(this::printBook);
-            else if (choice.equals("3")) System.out.println(service.register(ask("Username"), ask("Password")) ? "Registered." : "Username exists.");
+            else if (choice.equals("3")) System.out.println(service.register(ask("Username"), ask("Password")) ? "Registered." : "Username exists or credentials are empty.");
             else if (choice.equals("4")) login();
             else if (choice.equals("5")) return;
         }
@@ -34,6 +34,6 @@ public final class ConsoleApplication {
         }
     }
 
-    private String ask(String label) { System.out.print(label + ": "); return input.nextLine().trim(); }
+    private String ask(String label) { System.out.print(label + ": "); return input.hasNextLine() ? input.nextLine().trim() : ""; }
     private void printBook(Book b) { System.out.printf("%s | %s | %s | %d | %s%n", b.getTitle(), b.getAuthor(), b.getGenre(), b.getYear(), b.isAvailable() ? "Available" : "Borrowed/Waitlisted"); }
 }

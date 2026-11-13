@@ -19,7 +19,6 @@ public final class Book extends LibraryItem implements Borrowable {
     @Override
     public boolean borrow(Member member) {
         if (available) { available = false; return true; }
-        if (!waitlist.contains(member)) waitlist.add(member);
         return false;
     }
 

@@ -25,7 +25,7 @@ public final class LibraryService {
         addBook("Pathfit 2", "PLM Professors", "Educational", 2025);
     }
 
-    public boolean register(String username, String password) { if (users.findById(username).isPresent()) return false; users.save(new Member(username, password)); return true; }
+    public boolean register(String username, String password) { if (username == null || username.isBlank() || password == null || password.isBlank() || users.findById(username).isPresent()) return false; users.save(new Member(username, password)); return true; }
     public User login(String username, String password) { return users.findById(username).filter(u -> u.authenticate(password)).orElse(null); }
     public boolean addBook(String title, String author, String genre, int year) { if (books.findById(title).isPresent()) return false; books.save(new Book(title, author, genre, year)); return true; }
     public List<Book> catalog() { return books.findAll(); }
