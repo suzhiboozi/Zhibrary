@@ -1,0 +1,6 @@
+/out/
+/data/
+node_modules/
+frontend/dist/
+backend/target/
+backend/data/

@@ -1,0 +1,5 @@
+{
+  "name": "libris",
+  "private": true,
+  "scripts": { "predev": "npm install --prefix frontend", "dev": "npm --prefix frontend run dev", "prebuild": "npm install --prefix frontend", "build": "npm --prefix frontend run build", "backend": "mvn -f backend/pom.xml spring-boot:run" }
+}
