@@ -72,7 +72,19 @@ function Shell({ session, activeTab, onSelectTab, onLogout, backendOnline, child
     <header className="top-header"><button className="brand" onClick={() => onSelectTab('overview')}><span className="brand-mark"><Library size={22}/></span>Libris<span className="workspace-tag">{staff ? 'LIBRARIAN' : 'MEMBER'}</span></button>
       <button className="mobile-menu" aria-label="Toggle navigation" aria-expanded={mobileOpen} onClick={() => setMobileOpen(!mobileOpen)}>{mobileOpen ? <X/> : <Menu/>}</button>
       <nav className={`top-nav ${mobileOpen ? 'is-open' : ''}`} aria-label="Main navigation">{links.map(([key, Icon, label]) => <button key={key} aria-current={activeTab === key ? 'page' : undefined} className={activeTab === key ? 'active' : ''} onClick={() => { onSelectTab(key); setMobileOpen(false) }}><Icon size={17}/>{label}</button>)}</nav>
-      <button className="profile-exit" onClick={onLogout} title="Sign out"><span className="avatar">{(session.name || session.username || 'L').slice(0,1)}</span><span>{session.username}</span><LogOut size={16}/></button>
+      <details className="account-menu">
+        <summary className="profile-exit" aria-label="View profile" title="View profile">
+          <span className="avatar">{(session.name || session.username || 'L').slice(0,1)}</span>
+          <span>{session.username}</span><UserCheck size={16}/>
+        </summary>
+        <div className="account-panel">
+          <p className="label">YOUR ACCOUNT</p>
+          <strong>{session.name || session.username}</strong>
+          <p>@{session.username}</p>
+          <span className="account-role">{staff ? 'Librarian' : 'Member'}</span>
+          <button type="button" className="account-signout" onClick={onLogout}><LogOut size={16}/> Sign out</button>
+        </div>
+      </details>
     </header>
     <main className="workspace"><div className="page-header"><div><p className="label">{staff ? 'THE LIBRARIAN’S DESK' : 'YOUR READING JOURNEY'}</p><h1>{titles[activeTab]}</h1><p className="muted">{staff ? 'Keep stories circulating and your community connected.' : 'Discover a story, make it yours, and keep your curiosity growing.'}</p></div><span className={`backend-badge ${backendOnline ? 'online' : 'offline'}`}><span className="dot"/>{backendOnline ? 'Library connected' : 'Preview · library offline'}</span></div>{children}</main><Footer/>
   </div>

@@ -137,3 +137,22 @@ describe('Staff and reusable controls', () => {
     expect(await screen.findByRole('button',{name:'My reading shelf'})).toBeTruthy()
   })
 })
+
+
+describe('Profile menu', () => {
+  it.each([[member, MemberDashboard, 'Member'], [staff, AdminDashboard, 'Librarian']])('opens the profile without signing out for $username', async (session, Dashboard, role) => {
+    mockAPI(url => url === '/api/admin/summary' ? {} : [])
+    const logout = vi.fn()
+    render(<Dashboard {...dashboardProps} session={session} onLogout={logout}/>)
+    const user = userEvent.setup()
+    const profile = screen.getByLabelText('View profile')
+    expect(profile.closest('details').open).toBe(false)
+    await user.click(profile)
+    expect(profile.closest('details').open).toBe(true)
+    expect(screen.getByText(session.name)).toBeTruthy()
+    expect(screen.getByText(role, { selector: '.account-role' })).toBeTruthy()
+    expect(logout).not.toHaveBeenCalled()
+    await user.click(screen.getByRole('button', {name:'Sign out'}))
+    expect(logout).toHaveBeenCalledTimes(1)
+  })
+})
