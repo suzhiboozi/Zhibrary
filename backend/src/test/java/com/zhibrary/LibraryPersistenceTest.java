@@ -49,9 +49,13 @@ class LibraryPersistenceTest {
         return books.save(new Book("Persistence Test", UUID.randomUUID().toString(), "Test Author", "Fiction", 2024, ""));
     }
     void borrow(User user, Book book, int status) throws Exception {
-        mvc.perform(post("/api/borrow").session(session(user)).contentType("application/json")
+        var response = mvc.perform(post("/api/borrow").session(session(user)).contentType("application/json")
             .content(json.writeValueAsString(Map.of("username", user.getUsername(), "bookId", book.getId().toString()))))
-            .andExpect(status().is(status));
+            .andExpect(status().is(status == 200 ? 202 : status)).andReturn();
+        if (status == 200) {
+            long id=json.readTree(response.getResponse().getContentAsString()).get("id").asLong();
+            mvc.perform(post("/api/admin/borrow-requests/"+id+"/approve")).andExpect(status().isOk());
+        }
     }
     @Test void bookCreationUpdateAndDeletionArePersisted() throws Exception {
         String isbn = UUID.randomUUID().toString();

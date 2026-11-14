@@ -95,3 +95,41 @@ mkdir -p /tmp/libris-console-check
 javac -d /tmp/libris-console-check src/Main.java src/model/*.java src/repository/*.java src/service/*.java src/ui/*.java tests/ConsoleRegression.java
 java -ea -cp /tmp/libris-console-check ConsoleRegression
 ```
+
+## Member return schedules
+
+Before submitting a borrowing request, members choose a duration of 1–7 days or
+an exact return date from tomorrow through seven days from today. The backend
+enforces the same limits. Durations start on approval; exact dates stay fixed
+and must still be in the future on approval. Librarians see the requested
+schedule before approving or rejecting. There is no librarian duration setting.
+Existing active loans retain their assigned due dates.
+
+## Librarian approval for borrowing
+
+Members now choose **Request to borrow**. The request is saved as PENDING without
+checking out the book or assigning a due date. Members can track pending and
+rejected requests on their overview and reading shelf. Duplicate pending requests
+for the same member and book are blocked.
+
+Librarians open **Approvals** to approve or reject requests. Approval rechecks
+availability, the three-loan limit, outstanding fines, and overdue loans. It then
+creates the active loan and assigns a due date using the member’s selected return schedule. A duration starts on approval; a specific date stays fixed. Approval is safe to retry without creating another
+loan. Rejection creates no loan. Pending requests do not reserve a book; when
+several members request the same copy, only one can be approved while it is
+available. Existing loans and their due dates are preserved.
+
+## Librarian fine management
+
+Open **Fines** in the librarian header to save the daily overdue rate (default
+10 pesos, allowed 0–10,000 with up to two decimal places). A rate of zero disables
+daily overdue charges. Return processing computes max(0, return date minus due
+date) times the saved daily rate. The due date itself is not an overdue day.
+Rate changes apply at return time and do not rewrite fines already assessed.
+
+The calculator previews a fee from a due date and actual or planned return date
+without charging a member. For returned loans, librarians can adjust the assessed
+fine (including a zero-peso waiver) with a required reason. The adjustment changes
+the member’s outstanding balance by the difference and records the old fine, new
+fine, reason, librarian, and timestamp. Reapplying the same amount does not charge
+or waive the balance twice. Members cannot change rates or adjust their own fines.

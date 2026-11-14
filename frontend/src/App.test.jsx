@@ -156,3 +156,140 @@ describe('Profile menu', () => {
     expect(logout).toHaveBeenCalledTimes(1)
   })
 })
+
+describe('Borrowing approval', () => {
+  it('submits a request and displays pending status rather than starting a loan', async () => {
+    let requested = false
+    mockAPI((url, options) => {
+      if (url === '/api/borrow' && options.method === 'POST') { requested = true; return {id:31,status:'PENDING'} }
+      if (url === '/api/borrow/requests/member') return requested ? [{id:31,status:'PENDING',book:books[0],requestedDate:'2026-11-14'}] : []
+      if (url === '/api/books') return books
+      return []
+    })
+    render(<MemberDashboard {...dashboardProps} session={member}/>)
+    await userEvent.setup().click(screen.getByRole('button',{name:/Request to borrow/}))
+    await userEvent.setup().click(screen.getByRole('button',{name:'Submit borrowing request'}))
+    await screen.findByText(/A librarian must approve it before the loan begins/)
+    await waitFor(() => expect(screen.getByRole('button',{name:/Awaiting approval/}).disabled).toBe(true))
+    expect(screen.queryByText(/Successfully borrowed/)).toBeNull()
+    expect(screen.getByText('Borrowing requests')).toBeTruthy()
+  })
+  it('allows the librarian to approve and refresh the queue', async () => {
+    let reviewed = false
+    const fetch=mockAPI((url, options) => {
+      if (url === '/api/admin/borrow-requests/31/approve') { reviewed = true; return {status:'APPROVED',loan:{dueDate:'2026-12-01'}} }
+      if (url === '/api/admin/borrow-requests') return reviewed ? [] : [{id:31,book:books[0],user:{username:'member',firstName:'Juan',lastName:'Reader'},requestedDate:'2026-11-14'}]
+      if (url === '/api/admin/summary') return {}
+      if (url === '/api/books') return books
+      return []
+    })
+    render(<AdminDashboard {...dashboardProps} session={staff}/>)
+    const user=userEvent.setup()
+    await user.click(screen.getByRole('button',{name:'Approvals'}))
+    await user.click(await screen.findByRole('button',{name:'Approve El Filibusterismo for member'}))
+    await screen.findByText('Request approved. Return due 2026-12-01.')
+    await screen.findByText('No requests awaiting review')
+    expect(fetch.mock.calls.some(([url, options]) => url.endsWith('/31/approve') && options.method === 'POST')).toBe(true)
+  })
+  it('keeps a request visible when approval fails', async () => {
+    mockAPI(url => url === '/api/admin/borrow-requests' ? [{id:31,book:books[0],user:{username:'member'},requestedDate:'2026-11-14'}] : url === '/api/admin/summary' ? {} : [])
+    const original=globalThis.fetch
+    vi.stubGlobal('fetch',vi.fn((url,options)=>url.endsWith('/31/approve')?Promise.resolve({ok:false,status:400,json:async()=>({message:'Member has outstanding fines.'})}):original(url,options)))
+    render(<AdminDashboard {...dashboardProps} session={staff}/>)
+    const user=userEvent.setup()
+    await user.click(screen.getByRole('button',{name:'Approvals'}))
+    await user.click(await screen.findByRole('button',{name:'Approve El Filibusterismo for member'}))
+    await screen.findByText('Member has outstanding fines.')
+    expect(screen.getByRole('button',{name:'Reject El Filibusterismo for member'}).disabled).toBe(false)
+  })
+})
+
+describe('Member return schedule choice', () => {
+  it('sends a chosen duration with the borrowing request', async () => {
+    const fetch=mockAPI(url => url === '/api/borrow' ? {id:1,status:'PENDING'} : url === '/api/books' ? books : [])
+    render(<MemberDashboard {...dashboardProps} session={member}/>)
+    const user=userEvent.setup()
+    await user.click(screen.getByRole('button',{name:/Request to borrow/}))
+    const input=screen.getByLabelText('Borrowing duration in days')
+    expect(input.max).toBe('7')
+    await user.clear(input);await user.type(input,'3')
+    await user.click(screen.getByRole('button',{name:'Submit borrowing request'}))
+    await screen.findByText(/A librarian must approve it/)
+    const call=fetch.mock.calls.find(([url,options]) => url === '/api/borrow' && options.method === 'POST')
+    expect(JSON.parse(call[1].body)).toMatchObject({durationDays:3})
+    expect(JSON.parse(call[1].body).returnDate).toBeUndefined()
+  })
+  it('sends an exact return date with no competing duration', async () => {
+    const fetch=mockAPI(url => url === '/api/borrow' ? {id:1,status:'PENDING'} : url === '/api/books' ? books : [])
+    render(<MemberDashboard {...dashboardProps} session={member}/>)
+    const user=userEvent.setup()
+    await user.click(screen.getByRole('button',{name:/Request to borrow/}))
+    await user.selectOptions(screen.getByLabelText('Return schedule type'),'date')
+    const input=screen.getByLabelText('Requested return date')
+    const chosen=input.min
+    fireEvent.change(input,{target:{value:chosen}})
+    await user.click(screen.getByRole('button',{name:'Submit borrowing request'}))
+    await screen.findByText(/A librarian must approve it/)
+    const call=fetch.mock.calls.find(([url,options]) => url === '/api/borrow' && options.method === 'POST')
+    expect(JSON.parse(call[1].body)).toMatchObject({returnDate:chosen})
+    expect(JSON.parse(call[1].body).durationDays).toBeUndefined()
+  })
+  it('does not expose a duration settings tab to the librarian', async () => {
+    mockAPI(url => url === '/api/admin/summary' ? {} : [])
+    render(<AdminDashboard {...dashboardProps} session={staff}/>)
+    expect(screen.queryByRole('button',{name:'Settings'})).toBeNull()
+  })
+})
+
+describe('Librarian fines management', () => {
+  function fineAPI() {
+    let fine=30
+    return mockAPI((url, options) => {
+      if(url === '/api/admin/summary') return {}
+      if(url === '/api/admin/fines/policy') return {dailyRate: options.method === 'PUT' ? Number(JSON.parse(options.body).dailyRate) : 10}
+      if(url === '/api/admin/fines/calculate') return {overdueDays:3,dailyRate:10,total:30}
+      if(url === '/api/admin/fines/loans/9/adjust') { fine=Number(JSON.parse(options.body).amount); return {id:9,fine} }
+      if(url === '/api/admin/fines/loans') return [{id:9,book:books[0],user:{username:'member'},fine}]
+      return []
+    })
+  }
+  it('loads and saves the daily fine rate', async () => {
+    const fetch=fineAPI()
+    render(<AdminDashboard {...dashboardProps} session={staff}/>)
+    const user=userEvent.setup();await user.click(screen.getByRole('button',{name:'Fines'}))
+    const input=await screen.findByLabelText('Daily fine rate in pesos')
+    await waitFor(()=>expect(input.value).toBe('10'))
+    await user.clear(input);await user.type(input,'12.50')
+    await user.click(screen.getByRole('button',{name:'Save fine rate'}))
+    await screen.findByText(/Daily fine rate saved/)
+    const call=fetch.mock.calls.find(([url,options])=>url === '/api/admin/fines/policy' && options.method === 'PUT')
+    expect(JSON.parse(call[1].body)).toEqual({dailyRate:12.5})
+  })
+  it('computes a preview using due and return dates', async () => {
+    const fetch=fineAPI()
+    render(<AdminDashboard {...dashboardProps} session={staff}/>)
+    const user=userEvent.setup();await user.click(screen.getByRole('button',{name:'Fines'}))
+    fireEvent.change(await screen.findByLabelText('Book due date'),{target:{value:'2026-11-10'}})
+    fireEvent.change(screen.getByLabelText('Actual or planned return date'),{target:{value:'2026-11-13'}})
+    await waitFor(()=>expect(screen.getByRole('button',{name:'Compute fine'}).disabled).toBe(false))
+    await user.click(screen.getByRole('button',{name:'Compute fine'}))
+    await screen.findByText('₱30.00')
+    expect(screen.getByText('3 overdue days × ₱10.00 per day')).toBeTruthy()
+    expect(fetch.mock.calls.some(([url])=>url.endsWith('/adjust'))).toBe(false)
+  })
+  it('requires a selected returned loan and sends the fine adjustment reason', async () => {
+    const fetch=fineAPI()
+    render(<AdminDashboard {...dashboardProps} session={staff}/>)
+    const user=userEvent.setup();await user.click(screen.getByRole('button',{name:'Fines'}))
+    const select=await screen.findByLabelText('Returned loan')
+    await waitFor(()=>expect(select.options.length).toBe(2))
+    await user.selectOptions(select,'9')
+    const amount=screen.getByLabelText('Adjusted fine in pesos')
+    await user.clear(amount);await user.type(amount,'10')
+    await user.type(screen.getByLabelText('Reason for adjustment'),'Approved partial waiver')
+    await user.click(screen.getByRole('button',{name:'Apply fine adjustment'}))
+    await screen.findByText(/member’s outstanding balance updated/)
+    const call=fetch.mock.calls.find(([url])=>url.endsWith('/9/adjust'))
+    expect(JSON.parse(call[1].body)).toEqual({amount:10,reason:'Approved partial waiver'})
+  })
+})

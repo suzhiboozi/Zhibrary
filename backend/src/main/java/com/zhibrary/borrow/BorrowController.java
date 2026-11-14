@@ -21,26 +21,21 @@ public class BorrowController {
     private final BorrowRepository records;
     private final WaitlistRepository waitlist;
     private final Access access;
+    private final com.zhibrary.fine.FineService fines;
+    private final com.zhibrary.approval.BorrowApprovalService approvals;
+    private final com.zhibrary.approval.BorrowRequestRepository requests;
     @jakarta.persistence.PersistenceContext private jakarta.persistence.EntityManager entityManager;
-    public BorrowController(UserRepository u,BookRepository b,BorrowRepository r,WaitlistRepository w,Access a) { users=u; books=b; records=r; waitlist=w; access=a; }
+    public BorrowController(UserRepository u,BookRepository b,BorrowRepository r,WaitlistRepository w,Access a,com.zhibrary.approval.BorrowApprovalService s,com.zhibrary.approval.BorrowRequestRepository requests,com.zhibrary.fine.FineService fines) { users=u; books=b; records=r; waitlist=w; access=a; approvals=s; this.requests=requests; this.fines=fines; }
     @GetMapping("/{username}") public List<BorrowRecord> history(@PathVariable String username,HttpServletRequest request) {
         access.owner(request,username);
         return records.findByUserUsernameOrderByBorrowedDateDesc(username);
     }
-    @Transactional
+    @GetMapping("/requests/{username}") public List<com.zhibrary.approval.BorrowRequest> requests(@PathVariable String username,HttpServletRequest request) {
+        access.owner(request,username); return requests.findByUserUsernameOrderByIdDesc(username);
+    }
     @PostMapping public ResponseEntity<?> borrow(@RequestBody Map<String,String> p,HttpServletRequest request) {
-        User u=users.lockByUsername(p.get("username")).orElseThrow();
-        entityManager.refresh(u);
-        access.owner(request,u.getUsername());
-        Book b=books.lockById(bookId(p)).orElseThrow();
-        List<BorrowRecord> active=records.findByUserUsernameOrderByBorrowedDateDesc(u.getUsername()).stream().filter(x->x.getStatus()==BorrowStatus.ACTIVE).toList();
-        if(active.size()>=3 || u.getOutstandingFine()>0 || active.stream().anyMatch(x->x.getDueDate().isBefore(LocalDate.now())))
-            return bad("Borrowing is unavailable while your limit, fine, or overdue status is unresolved.");
-        if(b.getStatus()!=BookStatus.AVAILABLE) return bad("Book is not available; join the waitlist instead.");
-        b.setStatus(BookStatus.BORROWED);
-        waitlist.findByUserUsernameOrderByRequestedDateDesc(u.getUsername()).stream()
-            .filter(e->e.getBook().getId().equals(b.getId())&&!e.isClaimed()).forEach(WaitlistEntry::claim);
-        return ResponseEntity.ok(records.save(new BorrowRecord(u,b,LocalDate.now(),LocalDate.now().plusDays(7))));
+        access.owner(request,p.get("username"));
+        return ResponseEntity.accepted().body(approvals.request(p.get("username"),bookId(p),p.get("durationDays"),p.get("returnDate")));
     }
     @Transactional
     @PostMapping("/waitlist") public ResponseEntity<?> join(@RequestBody Map<String,String> p,HttpServletRequest request) {
@@ -62,7 +57,8 @@ public class BorrowController {
         entityManager.refresh(u);
         Book b=books.lockById(r.getBook().getId()).orElseThrow();
         if(r.getStatus()==BorrowStatus.RETURNED) return r;
-        double fine=Math.max(0,ChronoUnit.DAYS.between(r.getDueDate(),LocalDate.now()))*10;
+        var calculation=fines.calculate(r.getDueDate(),LocalDate.now());
+        double fine=calculation.total().doubleValue();
         r.returnBook(LocalDate.now(),fine); u.addFine(fine); b.setStatus(BookStatus.AVAILABLE);
         return r;
     }

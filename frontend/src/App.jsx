@@ -1,5 +1,6 @@
 import React, { useEffect, useMemo, useState } from 'react'
 import {
+  Settings,
   ArrowRight,
   Sparkles,
   Bookmark,
@@ -66,8 +67,8 @@ function Footer({ onChoose }) {
 function Shell({ session, activeTab, onSelectTab, onLogout, backendOnline, children }) {
   const [mobileOpen, setMobileOpen] = useState(false)
   const staff = session?.role === 'LIBRARIAN'
-  const links = staff ? [['overview', LayoutDashboard, 'Overview'], ['catalog', Library, 'Collection'], ['add', PlusCircle, 'Add a book'], ['members', Users, 'Members']] : [['overview', LayoutDashboard, 'Overview'], ['catalog', Library, 'Discover books'], ['borrowed', Bookmark, 'My reading shelf']]
-  const titles = { overview: staff ? 'Your library, at a glance.' : `A new chapter awaits, ${session.name?.split(' ')[0] || session.username}.`, catalog: staff ? 'Care for your collection.' : 'Find your next great read.', add: 'Make room for a new story.', members: 'Meet your reading community.', borrowed: 'Your personal reading shelf.' }
+  const links = staff ? [['overview', LayoutDashboard, 'Overview'], ['catalog', Library, 'Collection'], ['add', PlusCircle, 'Add a book'], ['members', Users, 'Members'], ['approvals', UserCheck, 'Approvals'], ['fines', Settings, 'Fines']] : [['overview', LayoutDashboard, 'Overview'], ['catalog', Library, 'Discover books'], ['borrowed', Bookmark, 'My reading shelf']]
+  const titles = { overview: staff ? 'Your library, at a glance.' : `A new chapter awaits, ${session.name?.split(' ')[0] || session.username}.`, catalog: staff ? 'Care for your collection.' : 'Find your next great read.', add: 'Make room for a new story.', members: 'Meet your reading community.', approvals: 'Review borrowing requests.', fines: 'Manage overdue fines.', borrowed: 'Your personal reading shelf.' }
   return <div className="app-shell animate-page">
     <header className="top-header"><button className="brand" onClick={() => onSelectTab('overview')}><span className="brand-mark"><Library size={22}/></span>Libris<span className="workspace-tag">{staff ? 'LIBRARIAN' : 'MEMBER'}</span></button>
       <button className="mobile-menu" aria-label="Toggle navigation" aria-expanded={mobileOpen} onClick={() => setMobileOpen(!mobileOpen)}>{mobileOpen ? <X/> : <Menu/>}</button>
@@ -95,9 +96,9 @@ function Entry({ onChoose, backendOnline }) {
     <header className="landing-header"><button className="brand" onClick={() => window.scrollTo({ top: 0, behavior: 'smooth' })}><span className="brand-mark"><Library size={23}/></span>Libris</button><nav aria-label="Welcome navigation"><a href="#collection">The collection</a><a href="#how-it-works">How it works</a><button className="secondary" onClick={() => onChoose('USER')}>Member sign in <ArrowRight size={16}/></button></nav></header>
     <main><section className="landing-hero"><div className="hero-copy"><p className="label"><span className="small-line"/> YOUR NEXT CHAPTER STARTS HERE</p><h1>A world of stories.<br/><em>A place for you.</em></h1><p className="hero-description">Step away from the everyday. Discover timeless classics, new perspectives, and the book you didn’t know you needed.</p><div className="hero-actions"><button className="primary" onClick={() => onChoose('USER')}>Find your next read <ArrowRight size={18}/></button><a href="#collection">Explore the shelves <ArrowRight size={16}/></a></div><div className="hero-note"><span className="round-icon"><BookOpen size={20}/></span><p>A library at your fingertips.<br/><strong>Browse. Borrow. Begin again.</strong></p></div></div>
     <div className="hero-art"><span className="orbit-caption">GOOD BOOKS. ENDLESS POSSIBILITIES.</span><div className="hero-orbit"/><div className="hero-books">{[0,1,2].map((n) => <img key={n} src={`/covers/cover-${n}.svg`} alt={fallbackBooks[n].title} className={`hero-book book-${n}`}/>)}</div><div className="floating-note"><Sparkles size={21}/><div><strong>One more chapter?</strong><span>There’s always a story waiting.</span></div></div><span className="art-caption">THE LIBRIS COLLECTION · EST. FOR EVERY READER</span></div></section>
-    <section className="reading-strip"><span><BookOpen/> Stories worth discovering</span><span><Bookmark/> A shelf of your own</span><span><Clock/> Simple, seven-day loans</span></section>
+    <section className="reading-strip"><span><BookOpen/> Stories worth discovering</span><span><Bookmark/> A shelf of your own</span><span><Clock/> Clear return dates</span></section>
     <section className="landing-section" id="collection"><div className="section-heading"><div><p className="label">BETWEEN THE COVERS</p><h2>Old favorites. New discoveries.</h2></div><button className="text-button" onClick={() => onChoose('USER')}>Browse the collection <ArrowRight size={17}/></button></div><div className="featured-books">{fallbackBooks.slice(0,4).map((book,i) => <button className="featured-book" key={book.id} onClick={() => onChoose('USER')}><div className={`cover-stage stage-${i}`}><img src={`/covers/cover-${i}.svg`} alt={`${book.title} cover`}/><span className="cover-arrow"><ArrowRight size={20}/></span></div><span className="label">{book.category}</span><h3>{book.title}</h3><p>{book.author}</p></button>)}</div></section>
-    <section className="how-section" id="how-it-works"><div><p className="label">LESS FRICTION. MORE FICTION.</p><h2>Your next adventure,<br/>in three little steps.</h2><p className="muted">More time with the stories you love.</p></div><div className="steps">{[[Search,'Find your story','Explore by title, author, or genre.'],[BookOpen,'Make it your next read','Borrow an available book for seven days.'],[RefreshCw,'Return. Rediscover.','Manage your loans and start a new chapter.']].map(([Icon,title,copy],i) => <div className="reading-step" key={title}><span className="step-icon"><Icon size={23}/></span><div><small>0{i+1}</small><h3>{title}</h3><p>{copy}</p></div></div>)}</div></section>
+    <section className="how-section" id="how-it-works"><div><p className="label">LESS FRICTION. MORE FICTION.</p><h2>Your next adventure,<br/>in three little steps.</h2><p className="muted">More time with the stories you love.</p></div><div className="steps">{[[Search,'Find your story','Explore by title, author, or genre.'],[BookOpen,'Make it your next read','Request a book and wait for librarian approval.'],[RefreshCw,'Return. Rediscover.','Manage your loans and start a new chapter.']].map(([Icon,title,copy],i) => <div className="reading-step" key={title}><span className="step-icon"><Icon size={23}/></span><div><small>0{i+1}</small><h3>{title}</h3><p>{copy}</p></div></div>)}</div></section>
     <section className="join-banner"><Sparkles size={30}/><h2>Great stories are better shared.</h2><p>Your library community is waiting. Turn the first page.</p><button className="primary" onClick={() => onChoose('USER')}>Join the reading community <ArrowRight size={17}/></button></section></main><Footer onChoose={onChoose}/>
   </div>
 }
@@ -283,13 +284,14 @@ function MemberDashboard({ session, books, setBooks, onLogout, backendOnline }) 
   const [tab, setTab] = useState('overview')
   const [query, setQuery] = useState('')
   const [history, setHistory] = useState([])
+  const [borrowRequests, setBorrowRequests] = useState([])
   const [notice, setNotice] = useState('')
   const [filterMode, setFilterMode] = useState('all')
 
   const fetchHistory = () => {
     if (session?.username) {
-      request(`/borrow/${encodeURIComponent(session.username)}`)
-        .then(setHistory)
+      Promise.all([request(`/borrow/${encodeURIComponent(session.username)}`), request(`/borrow/requests/${encodeURIComponent(session.username)}`)])
+        .then(([loans, requests]) => { setHistory(loans); setBorrowRequests(requests) })
         .catch(e => setNotice(e.message))
     }
   }
@@ -302,6 +304,8 @@ function MemberDashboard({ session, books, setBooks, onLogout, backendOnline }) 
 
   const activeLoans = useMemo(() => history.filter(x => x.status === 'ACTIVE'), [history])
   const returnedLoans = useMemo(() => history.filter(x => x.status === 'RETURNED'), [history])
+  const pendingRequests = borrowRequests.filter(r => r.status === 'PENDING')
+  const requestedBookIds = new Set(pendingRequests.map(r => r.book?.id))
   const outstandingFine = history[0]?.user?.outstandingFine ?? session.fine ?? 0
 
   const filteredBooks = useMemo(() => {
@@ -313,20 +317,37 @@ function MemberDashboard({ session, books, setBooks, onLogout, backendOnline }) 
     })
   }, [books, query, filterMode])
 
-  const borrow = async (book) => {
+  const [requestBook, setRequestBook] = useState(null)
+  const [returnMode, setReturnMode] = useState('duration')
+  const [durationDays, setDurationDays] = useState('7')
+  const [returnDate, setReturnDate] = useState('')
+  const [sendingRequest, setSendingRequest] = useState(false)
+  const [requestError, setRequestError] = useState('')
+  const localDate = date => `${date.getFullYear()}-${String(date.getMonth()+1).padStart(2,'0')}-${String(date.getDate()).padStart(2,'0')}`
+  const tomorrow = new Date(); tomorrow.setDate(tomorrow.getDate()+1)
+  const latest = new Date(); latest.setDate(latest.getDate()+7)
+  useEffect(() => { if (requestBook) document.getElementById('return-choice-title')?.focus() }, [requestBook])
+  const borrow = (book) => { if (sendingRequest) return; setRequestBook(book); setReturnMode('duration'); setDurationDays('7'); setReturnDate(localDate(latest)); setRequestError('') }
+  const submitBorrowRequest = async event => {
+    event.preventDefault()
+    const book = requestBook
+    if (returnMode === 'duration' && (!Number.isInteger(Number(durationDays)) || Number(durationDays)<1 || Number(durationDays)>7)) { setRequestError('Choose a whole number from 1 to 7 days.'); return }
+    if (returnMode === 'date' && (!returnDate || returnDate<localDate(tomorrow) || returnDate>localDate(latest))) { setRequestError('Choose a return date from tomorrow through seven days from today.'); return }
+    setSendingRequest(true); setRequestError('')
     try {
       await request('/borrow', {
         method: 'POST',
-        body: JSON.stringify({ username: session.username, bookId: String(book.id) })
+        body: JSON.stringify({ username: session.username, bookId: String(book.id), ...(returnMode === 'duration' ? {durationDays: Number(durationDays)} : {returnDate}) })
       })
-      setNotice(`Successfully borrowed "${book.title}". Loan duration is 7 days.`)
+      setRequestBook(null)
+      setNotice(`Request sent for "${book.title}". A librarian must approve it before the loan begins.`)
       // Refresh books & user loans
       const updated = await request('/books')
       setBooks(updated)
       fetchHistory()
     } catch (e) {
-      setNotice(e.message)
-    }
+      setRequestError(e.message)
+    } finally { setSendingRequest(false) }
   }
 
   const waitlist = async (book) => {
@@ -361,6 +382,17 @@ function MemberDashboard({ session, books, setBooks, onLogout, backendOnline }) 
       onLogout={onLogout}
       backendOnline={backendOnline}
     >
+      {requestBook && <section className="table-panel return-choice" aria-labelledby="return-choice-title">
+        <h2 id="return-choice-title" tabIndex={-1}>Choose your return schedule</h2><p>Requesting <strong>{requestBook.title}</strong>. Maximum loan duration is seven days; librarian approval is required.</p>
+        <form onSubmit={submitBorrowRequest}>
+          <label className="field"><span>Return schedule type</span><select value={returnMode} onChange={e => setReturnMode(e.target.value)} disabled={sendingRequest}><option value="duration">Duration in days</option><option value="date">Specific return date</option></select></label>
+          {returnMode === 'duration' ? <label className="field"><span>Borrowing duration in days</span><input type="number" min="1" max="7" step="1" required value={durationDays} disabled={sendingRequest} onChange={e => setDurationDays(e.target.value)}/></label> : <label className="field"><span>Requested return date</span><input type="date" min={localDate(tomorrow)} max={localDate(latest)} required value={returnDate} disabled={sendingRequest} onChange={e => setReturnDate(e.target.value)}/></label>}
+          <p className="muted">Durations begin on approval. A specific return date stays fixed and must still be in the future when approved.</p>
+          {requestError && <p className="error-message" role="alert">{requestError}</p>}
+          <div className="approval-actions"><button className="primary" type="submit" disabled={sendingRequest || !backendOnline}>{sendingRequest ? 'Sending…' : 'Submit borrowing request'}</button><button className="secondary" type="button" disabled={sendingRequest} onClick={() => setRequestBook(null)}>Cancel</button></div>
+        </form>
+      </section>}
+
       {/* Metric Cards (All buttons link to appropriate tabs) */}
       <div className="metric-row">
         <button type="button" className="metric clickable" onClick={() => setTab('borrowed')} title="Click to view your active books">
@@ -401,6 +433,13 @@ function MemberDashboard({ session, books, setBooks, onLogout, backendOnline }) 
           <button aria-label="Dismiss notification" className="notice-close" onClick={() => setNotice('')}><X size={16} /></button>
         </div>
       )}
+
+      {(tab === 'overview' || tab === 'borrowed') && borrowRequests.some(r => r.status !== 'APPROVED') && <section className="table-panel request-panel">
+        <h2>Borrowing requests</h2><p className="muted">Your loan and due date begin only after a librarian approves your request.</p>
+        <table><thead><tr><th>Book</th><th>Requested</th><th>Return schedule</th><th>Decision</th></tr></thead><tbody>
+          {borrowRequests.filter(r => r.status !== 'APPROVED').map(r => <tr key={r.id}><td><strong>{r.book?.title}</strong></td><td>{r.requestedDate}</td><td>{r.requestedReturnDate || `${r.durationDays || 7} days after approval`}</td><td><span className={`status request-${r.status?.toLowerCase()}`}>{r.status === 'PENDING' ? 'Awaiting approval' : 'Rejected'}</span></td></tr>)}
+        </tbody></table>
+      </section>}
 
       {/* TAB 1: OVERVIEW */}
       {tab === 'overview' && (
@@ -466,8 +505,8 @@ function MemberDashboard({ session, books, setBooks, onLogout, backendOnline }) 
                   key={book.id}
                   book={book}
                   action={() => borrow(book)}
-                  actionLabel="Borrow book"
-                  disabled={!backendOnline || outstandingFine > 0 || activeLoans.length >= 3}
+                  actionLabel={requestedBookIds.has(book.id) ? 'Awaiting approval' : 'Request to borrow'}
+                  disabled={!backendOnline || outstandingFine > 0 || activeLoans.length >= 3 || requestedBookIds.has(book.id)}
                 />
               ))}
             </div>
@@ -514,8 +553,8 @@ function MemberDashboard({ session, books, setBooks, onLogout, backendOnline }) 
                 key={book.id}
                 book={book}
                 action={book.status === 'AVAILABLE' ? () => borrow(book) : () => waitlist(book)}
-                actionLabel={book.status === 'AVAILABLE' ? 'Borrow book' : book.status === 'BORROWED' ? 'Join waitlist' : 'Currently unavailable'}
-                disabled={!backendOnline || !['AVAILABLE', 'BORROWED'].includes(book.status) || (book.status === 'AVAILABLE' && (outstandingFine > 0 || activeLoans.length >= 3))}
+                actionLabel={requestedBookIds.has(book.id) ? 'Awaiting approval' : book.status === 'AVAILABLE' ? 'Request to borrow' : book.status === 'BORROWED' ? 'Join waitlist' : 'Currently unavailable'}
+                disabled={!backendOnline || requestedBookIds.has(book.id) || !['AVAILABLE', 'BORROWED'].includes(book.status) || (book.status === 'AVAILABLE' && (outstandingFine > 0 || activeLoans.length >= 3))}
               />
             ))}
           </div>
@@ -553,7 +592,7 @@ function MemberDashboard({ session, books, setBooks, onLogout, backendOnline }) 
                         <td>{x.dueDate}</td>
                         <td>
                           <span className={`status ${isOverdue ? 'overdue' : 'active'}`}>
-                            {isOverdue ? 'Overdue (₱10/day fine)' : 'Active Loan'}
+                            {isOverdue ? 'Overdue (fine applies)' : 'Active Loan'}
                           </span>
                         </td>
                         <td>
@@ -612,6 +651,80 @@ function MemberDashboard({ session, books, setBooks, onLogout, backendOnline }) 
 /* -------------------------------------------------------------------------- */
 /* Admin / Librarian Dashboard Component                                      */
 /* -------------------------------------------------------------------------- */
+function FineManagement({ backendOnline }) {
+  const [rate, setRate] = useState('')
+  const [loaded, setLoaded] = useState(false)
+  const [loans, setLoans] = useState([])
+  const [adjustments, setAdjustments] = useState([])
+  const [selected, setSelected] = useState('')
+  const [amount, setAmount] = useState('')
+  const [reason, setReason] = useState('')
+  const [dueDate, setDueDate] = useState('')
+  const now = new Date()
+  const [returnDate, setReturnDate] = useState(`${now.getFullYear()}-${String(now.getMonth()+1).padStart(2,'0')}-${String(now.getDate()).padStart(2,'0')}`)
+  const [calculation, setCalculation] = useState(null)
+  const [busy, setBusy] = useState(false)
+  const [error, setError] = useState('')
+  const [notice, setNotice] = useState('')
+  const loadRecords = async () => {
+    const [records, history] = await Promise.all([request('/admin/fines/loans'), request('/admin/fines/adjustments')])
+    setLoans(records); setAdjustments(history)
+  }
+  useEffect(() => {
+    let active = true
+    Promise.all([request('/admin/fines/policy'), request('/admin/fines/loans'), request('/admin/fines/adjustments')]).then(([policy, records, history]) => {
+      if (active) { setRate(String(policy.dailyRate)); setLoans(records); setAdjustments(history); setLoaded(true) }
+    }).catch(e => { if (active) setError(e.message) })
+    return () => { active = false }
+  }, [])
+  const run = async action => {
+    setBusy(true); setError(''); setNotice('')
+    try { await action() } catch (e) { setError(e.message) } finally { setBusy(false) }
+  }
+  const saveRate = event => {
+    event.preventDefault()
+    run(async () => {
+      const policy = await request('/admin/fines/policy', { method:'PUT', body:JSON.stringify({ dailyRate:Number(rate) }) })
+      setRate(String(policy.dailyRate)); setCalculation(null); setNotice('Daily fine rate saved. It applies when books are returned; previously assessed fines stay unchanged.')
+    })
+  }
+  const calculate = event => {
+    event.preventDefault(); setCalculation(null)
+    run(async () => setCalculation(await request('/admin/fines/calculate', { method:'POST', body:JSON.stringify({ dueDate, returnDate }) })))
+  }
+  const adjust = event => {
+    event.preventDefault()
+    run(async () => {
+      await request(`/admin/fines/loans/${selected}/adjust`, { method:'POST', body:JSON.stringify({ amount:Number(amount), reason }) })
+      await loadRecords(); setNotice('Fine adjusted and the member’s outstanding balance updated.'); setReason('')
+    })
+  }
+  return <div className="fine-management">
+    <p className="muted">Set the daily overdue rate, preview a calculation, or adjust an assessed fine on a returned book.</p>
+    {error && <p role="alert" className="error-message">{error}</p>}
+    {notice && <p role="status" className="success-message">{notice}</p>}
+    <div className="admin-grid">
+      <form className="form-panel" onSubmit={saveRate}><h2>Daily overdue fine</h2><p className="muted">The saved rate is used at return time. A book returned on or before its due date has no overdue fine.</p>
+        <label className="field"><span>Daily fine rate in pesos</span><input type="number" min="0" max="10000" step="0.01" required value={rate} disabled={!loaded || busy} onChange={e => setRate(e.target.value)}/></label>
+        <p className="muted">Use 0 to disable daily overdue charges. Changing this rate does not recalculate fines already assessed.</p><button className="primary" disabled={!loaded || busy || !backendOnline}>Save fine rate</button>
+      </form>
+      <form className="form-panel" onSubmit={calculate}><h2>Fine calculator</h2><p className="muted">Uses the saved rate. A calculation is a preview and does not charge a member.</p>
+        <label className="field"><span>Book due date</span><input type="date" required value={dueDate} onChange={e => { setDueDate(e.target.value); setCalculation(null) }}/></label>
+        <label className="field"><span>Actual or planned return date</span><input type="date" required value={returnDate} onChange={e => { setReturnDate(e.target.value); setCalculation(null) }}/></label>
+        <button className="primary" disabled={!loaded || busy || !backendOnline}>Compute fine</button>
+        {calculation && <div className="fine-calculation" role="status"><strong>₱{Number(calculation.total).toFixed(2)}</strong><span>{calculation.overdueDays} overdue day{calculation.overdueDays === 1 ? '' : 's'} × ₱{Number(calculation.dailyRate).toFixed(2)} per day</span></div>}
+      </form>
+    </div>
+    <form className="form-panel" onSubmit={adjust}><h2>Adjust an assessed fine</h2><p className="muted">Choose a returned loan. The difference updates the member’s balance; the librarian and reason are recorded. Use 0 to waive this loan’s fine.</p>
+      <label className="field"><span>Returned loan</span><select required value={selected} disabled={!loaded || busy} onChange={e => { setSelected(e.target.value); const loan=loans.find(l => String(l.id)===e.target.value); setAmount(loan ? String(loan.fine) : ''); setReason('') }}><option value="">Select a returned loan</option>{loans.map(l => <option key={l.id} value={l.id}>#{l.id} · {l.user?.username} · {l.book?.title} · ₱{Number(l.fine).toFixed(2)}</option>)}</select></label>
+      <div className="form-grid"><label className="field"><span>Adjusted fine in pesos</span><input type="number" min="0" max="1000000" step="0.01" required value={amount} disabled={!selected || busy} onChange={e => setAmount(e.target.value)}/></label><label className="field"><span>Reason for adjustment</span><input required maxLength="255" value={reason} disabled={!selected || busy} onChange={e => setReason(e.target.value)}/></label></div>
+      {!loans.length && loaded && <p className="muted">No returned loans are available to adjust.</p>}
+      <button className="primary" disabled={!loaded || !selected || busy || !backendOnline}>Apply fine adjustment</button>
+    </form>
+    <section className="table-panel"><h2>Recent fine adjustments</h2>{adjustments.length ? <table><thead><tr><th>Loan</th><th>Previous fine</th><th>New fine</th><th>Reason</th><th>Librarian</th></tr></thead><tbody>{adjustments.map(a => <tr key={a.id}><td>#{a.loan?.id} · {a.loan?.user?.username}</td><td>₱{Number(a.previousFine).toFixed(2)}</td><td>₱{Number(a.newFine).toFixed(2)}</td><td>{a.reason}</td><td>{a.librarian}<br/><small>{a.adjustedAt?.replace('T',' ').slice(0,19)}</small></td></tr>)}</tbody></table> : <p className="muted">Adjustments will appear here after a fine is changed.</p>}</section>
+  </div>
+}
+
 function AdminDashboard({ session, books, setBooks, onLogout, backendOnline }) {
   const [tab, setTab] = useState('overview')
   const [summary, setSummary] = useState({})
@@ -620,6 +733,19 @@ function AdminDashboard({ session, books, setBooks, onLogout, backendOnline }) {
   const [query, setQuery] = useState('')
   const [notice, setNotice] = useState('')
   const [busy, setBusy] = useState(false)
+  const [pendingRequests, setPendingRequests] = useState([])
+  const [reviewing, setReviewing] = useState(null)
+
+  const loadRequests = () => request('/admin/borrow-requests').then(setPendingRequests).catch(e => setNotice(e.message))
+  const reviewRequest = async (id, decision) => {
+    setReviewing(id)
+    try {
+      const reviewed = await request(`/admin/borrow-requests/${id}/${decision}`, { method: 'POST' })
+      setNotice(decision === 'approve' ? `Request approved. Return due ${reviewed.loan.dueDate}.` : 'Borrowing request rejected.')
+      await loadRequests()
+      setBooks(await request('/books'))
+    } catch (e) { setNotice(e.message) } finally { setReviewing(null) }
+  }
 
   const loadSummary = () => {
     request('/admin/summary')
@@ -643,6 +769,7 @@ function AdminDashboard({ session, books, setBooks, onLogout, backendOnline }) {
     loadSummary()
     loadOverdue()
     loadMembers()
+    loadRequests()
   }, [books])
 
   const statusCategories = ['available', 'borrowed', 'lost', 'maintenance']
@@ -769,6 +896,15 @@ function AdminDashboard({ session, books, setBooks, onLogout, backendOnline }) {
         </div>
       )}
 
+      {tab === 'overview' && <section className="approval-callout"><UserCheck size={24}/><div><strong>{pendingRequests.length} borrowing request{pendingRequests.length === 1 ? '' : 's'} awaiting approval</strong><p>Review requests before books leave the library.</p></div><button className="secondary" onClick={() => setTab('approvals')}>Review requests</button></section>}
+      {tab === 'fines' && <FineManagement backendOnline={backendOnline}/>}
+      {tab === 'approvals' && <section className="table-panel request-panel">
+        <div className="table-header-row"><h2>Pending borrowing requests ({pendingRequests.length})</h2><button className="secondary" onClick={loadRequests}><RefreshCw size={16}/> Refresh</button></div>
+        <p className="muted">Approval starts the loan using the member’s selected return schedule, with a seven-day maximum. Availability, fines, overdue loans, and the three-book limit are checked again.</p>
+        {pendingRequests.length ? <table><thead><tr><th>Member</th><th>Book</th><th>Requested</th><th>Return schedule</th><th>Actions</th></tr></thead><tbody>{pendingRequests.map(r => <tr key={r.id}><td>{r.user?.firstName} {r.user?.lastName}<br/><small>@{r.user?.username}</small></td><td><strong>{r.book?.title}</strong><br/><small>{r.book?.status === 'AVAILABLE' ? 'Available' : 'Currently unavailable'}</small></td><td>{r.requestedDate}</td><td>{r.requestedReturnDate || `${r.durationDays || 7} days after approval`}</td><td><div className="approval-actions"><button className="primary" aria-label={`Approve ${r.book?.title} for ${r.user?.username}`} disabled={!backendOnline || reviewing !== null || r.book?.status !== 'AVAILABLE'} onClick={() => reviewRequest(r.id, 'approve')}>Approve</button><button className="secondary" aria-label={`Reject ${r.book?.title} for ${r.user?.username}`} disabled={!backendOnline || reviewing !== null} onClick={() => reviewRequest(r.id, 'reject')}>Reject</button></div></td></tr>)}</tbody></table> : <div className="empty-state"><CheckCircle size={28}/><h3>No requests awaiting review</h3><p>New member borrowing requests will appear here.</p></div>}
+      </section>}
+
+
       {/* TAB 1: OVERVIEW */}
       {tab === 'overview' && (
         <div className="admin-grid animate-page">
@@ -821,7 +957,7 @@ function AdminDashboard({ session, books, setBooks, onLogout, backendOnline }) {
               </table>
             ) : (
               <p className="muted" style={{ padding: '20px 0' }}>
-                No active loans are overdue at this time. All borrowed copies are within their 7-day loan window.
+                No active loans are overdue at this time. All borrowed copies are within their assigned loan window.
               </p>
             )}
           </div>

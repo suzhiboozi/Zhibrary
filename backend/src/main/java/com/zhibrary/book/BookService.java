@@ -14,7 +14,8 @@ public class BookService {
     private final BookRepository repo;
     private final BorrowRepository loans;
     private final WaitlistRepository waitlist;
-    public BookService(BookRepository repo,BorrowRepository loans,WaitlistRepository waitlist) { this.repo=repo; this.loans=loans; this.waitlist=waitlist; }
+    private final com.zhibrary.approval.BorrowRequestRepository requests;
+    public BookService(BookRepository repo,BorrowRepository loans,WaitlistRepository waitlist,com.zhibrary.approval.BorrowRequestRepository requests) { this.repo=repo; this.loans=loans; this.waitlist=waitlist; this.requests=requests; }
     public List<Book> search(String q) {
         if(q==null || q.isBlank()) return repo.findAll();
         q=q.trim(); return repo.findByTitleContainingIgnoreCaseOrIsbnContainingIgnoreCaseOrCategoryContainingIgnoreCaseOrAuthorContainingIgnoreCase(q,q,q,q);
@@ -38,7 +39,7 @@ public class BookService {
     }
     @Transactional public void delete(Long id) {
         Book b=repo.lockById(id).orElseThrow();
-        if(loans.existsByBookId(id) || waitlist.existsByBookId(id)) throw new ResponseStatusException(HttpStatus.CONFLICT,"This book has loan or waitlist history and cannot be deleted. Mark it lost or under maintenance instead.");
+        if(loans.existsByBookId(id) || waitlist.existsByBookId(id) || requests.existsByBookId(id)) throw new ResponseStatusException(HttpStatus.CONFLICT,"This book has loan, request, or waitlist history and cannot be deleted. Mark it lost or under maintenance instead.");
         repo.delete(b);
     }
     private void validate(Book b) {

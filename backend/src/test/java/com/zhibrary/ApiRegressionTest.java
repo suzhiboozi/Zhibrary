@@ -36,6 +36,13 @@ class ApiRegressionTest {
     MockHttpServletRequestBuilder payload(MockHttpServletRequestBuilder request,Map<?,?> body) throws Exception { return request.contentType("application/json").content(json.writeValueAsString(body)); }
     Map<String,String> borrowing(User user,Book book) { return Map.of("username",user.getUsername(),"bookId",book.getId().toString()); }
 
+    long pending(User u,Book b) throws Exception {
+        var response=mvc.perform(payload(post("/api/borrow").session(session(u)),borrowing(u,b))).andExpect(status().isAccepted()).andReturn();
+        return json.readTree(response.getResponse().getContentAsString()).get("id").asLong();
+    }
+    void approved(User u,Book b) throws Exception {
+        mvc.perform(post("/api/admin/borrow-requests/"+pending(u,b)+"/approve").session(staff())).andExpect(status().isOk());
+    }
     @Test void anonymousAndMemberCannotUseStaffEndpoints() throws Exception {
         mvc.perform(get("/api/admin/summary")).andExpect(status().isUnauthorized());
         mvc.perform(post("/api/books").contentType("application/json").content("{}")).andExpect(status().isUnauthorized());
@@ -45,7 +52,7 @@ class ApiRegressionTest {
     }
     @Test void memberCannotReadOrReturnAnotherMembersLoan() throws Exception {
         User owner=member(), other=member(); Book b=book();
-        mvc.perform(payload(post("/api/borrow").session(session(owner)),borrowing(owner,b))).andExpect(status().isOk());
+        approved(owner,b);
         var loan=loans.findByUserUsernameOrderByBorrowedDateDesc(owner.getUsername()).getFirst();
         mvc.perform(get("/api/borrow/"+owner.getUsername()).session(session(other))).andExpect(status().isForbidden());
         mvc.perform(post("/api/borrow/"+loan.getId()+"/return").session(session(other))).andExpect(status().isForbidden());
@@ -88,7 +95,7 @@ class ApiRegressionTest {
     }
     @Test void activeLoansAndHistoryCannotBeCorruptedThroughCatalogue() throws Exception {
         User u=member(); Book b=book();
-        mvc.perform(payload(post("/api/borrow").session(session(u)),borrowing(u,b))).andExpect(status().isOk());
+        approved(u,b);
         mvc.perform(patch("/api/books/"+b.getId()+"/status?value=AVAILABLE").session(staff())).andExpect(status().isConflict());
         mvc.perform(delete("/api/books/"+b.getId()).session(staff())).andExpect(status().isConflict());
         Book fresh=book();
@@ -98,7 +105,7 @@ class ApiRegressionTest {
     }
     @Test void duplicateWaitlistOwnLoanAndLostBooksAreRejected() throws Exception {
         User owner=member(),reader=member(); Book b=book();
-        mvc.perform(payload(post("/api/borrow").session(session(owner)),borrowing(owner,b))).andExpect(status().isOk());
+        approved(owner,b);
         mvc.perform(payload(post("/api/borrow/waitlist").session(session(owner)),borrowing(owner,b))).andExpect(status().isBadRequest());
         mvc.perform(payload(post("/api/borrow/waitlist").session(session(reader)),borrowing(reader,b))).andExpect(status().isOk());
         mvc.perform(payload(post("/api/borrow/waitlist").session(session(reader)),borrowing(reader,b))).andExpect(status().isConflict());
@@ -125,10 +132,11 @@ class ApiRegressionTest {
     }
     @Test void concurrentBorrowsCannotCheckOutOneCopyTwice() throws Exception {
         Book b=book(); User first=member(),second=member();
+        List<Long> ids=List.of(pending(first,b),pending(second,b));
         try(var executor=Executors.newFixedThreadPool(2)) {
             var start=new CountDownLatch(1);
             List<Future<Integer>> futures=new ArrayList<>();
-            for(User user:List.of(first,second)) futures.add(executor.submit(()->{ start.await(); return mvc.perform(payload(post("/api/borrow").session(session(user)),borrowing(user,b))).andReturn().getResponse().getStatus(); }));
+            for(Long id:ids) futures.add(executor.submit(()->{ start.await(); return mvc.perform(post("/api/admin/borrow-requests/"+id+"/approve").session(staff())).andReturn().getResponse().getStatus(); }));
             start.countDown();
             List<Integer> statuses=new ArrayList<>(); for(var f:futures) statuses.add(f.get(15,TimeUnit.SECONDS));
             assertThat(statuses).containsExactlyInAnyOrder(200,400);
@@ -137,11 +145,12 @@ class ApiRegressionTest {
     }
     @Test void concurrentBorrowsRespectTheThreeLoanLimit() throws Exception {
         User user=member();
-        for(int i=0;i<2;i++) mvc.perform(payload(post("/api/borrow").session(session(user)),borrowing(user,book()))).andExpect(status().isOk());
+        for(int i=0;i<2;i++) approved(user,book());
         List<Book> candidates=List.of(book(),book());
+        List<Long> ids=List.of(pending(user,candidates.get(0)),pending(user,candidates.get(1)));
         try(var executor=Executors.newFixedThreadPool(2)) {
             var start=new CountDownLatch(1); List<Future<Integer>> futures=new ArrayList<>();
-            for(Book b:candidates) futures.add(executor.submit(()->{ start.await(); return mvc.perform(payload(post("/api/borrow").session(session(user)),borrowing(user,b))).andReturn().getResponse().getStatus(); }));
+            for(Long id:ids) futures.add(executor.submit(()->{ start.await(); return mvc.perform(post("/api/admin/borrow-requests/"+id+"/approve").session(staff())).andReturn().getResponse().getStatus(); }));
             start.countDown(); List<Integer> statuses=new ArrayList<>(); for(var f:futures) statuses.add(f.get(15,TimeUnit.SECONDS));
             assertThat(statuses).containsExactlyInAnyOrder(200,400);
         }
@@ -166,6 +175,19 @@ class ApiRegressionTest {
             mvc.perform(get("/api/admin/summary").header("Origin",origin).session(staff())).andExpect(status().isOk());
             mvc.perform(payload(post("/api/books").header("Origin",origin).session(staff()),Map.of("title","Origin Test","isbn",UUID.randomUUID().toString(),"author","Writer","category","Fiction","publicationYear",2024))).andExpect(status().isOk());
         }
+    }
+
+    @Test void concurrentLegacyLoginAndReturnPreserveBothHashAndFine() throws Exception {
+        User user=member();Book b=book();b.setStatus(BookStatus.BORROWED);books.save(b);
+        var loan=loans.save(new BorrowRecord(user,b,java.time.LocalDate.now().minusDays(10),java.time.LocalDate.now().minusDays(2)));
+        try(var executor=Executors.newFixedThreadPool(2)) {
+            var start=new CountDownLatch(1);
+            var login=executor.submit(()->{start.await();return mvc.perform(payload(post("/api/auth/login"),Map.of("username",user.getUsername(),"password","testpass123"))).andReturn().getResponse().getStatus();});
+            var returned=executor.submit(()->{start.await();return mvc.perform(post("/api/borrow/"+loan.getId()+"/return").session(session(user))).andReturn().getResponse().getStatus();});
+            start.countDown();assertThat(login.get(15,TimeUnit.SECONDS)).isEqualTo(200);assertThat(returned.get(15,TimeUnit.SECONDS)).isEqualTo(200);
+        }
+        User saved=users.findById(user.getId()).orElseThrow();
+        assertThat(saved.getPassword()).startsWith("pbkdf2$");assertThat(saved.getOutstandingFine()).isEqualTo(20);
     }
 
 }

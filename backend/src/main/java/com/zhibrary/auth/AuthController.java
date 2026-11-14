@@ -14,9 +14,10 @@ public class AuthController {
     private final UserRepository users;
     private final Access access;
     public AuthController(UserRepository users, Access access) { this.users=users; this.access=access; }
+    @org.springframework.transaction.annotation.Transactional
     @PostMapping("/login") public ResponseEntity<?> login(@RequestBody Map<String,String> p, HttpServletRequest request) {
         String key=required(p,"username"); String password=required(p,"password");
-        User u=users.findByUsername(key).orElseGet(() -> users.findByEmail(key).orElse(null));
+        User u=users.lockByLogin(key).orElse(null);
         if(u==null || !Passwords.matches(password,u.getPassword())) return ResponseEntity.status(401).body(Map.of("message","Invalid credentials"));
         if (!u.getPassword().startsWith("pbkdf2$")) { u.setPassword(Passwords.hash(password)); users.save(u); }
         HttpSession old=request.getSession(false); if(old!=null) old.invalidate();

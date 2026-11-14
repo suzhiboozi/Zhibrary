@@ -19,6 +19,8 @@ public class ApiErrors {
     ResponseEntity<?> malformed(Exception e) { return ResponseEntity.badRequest().body(Map.of("message", "Check the request fields and try again.")); }
     @ExceptionHandler(DataIntegrityViolationException.class)
     ResponseEntity<?> conflict(DataIntegrityViolationException e) { return ResponseEntity.status(409).body(Map.of("message", "This record already exists or is linked to library activity.")); }
+    @ExceptionHandler({org.springframework.dao.OptimisticLockingFailureException.class, org.springframework.dao.PessimisticLockingFailureException.class})
+    ResponseEntity<?> concurrentUpdate(Exception e) { return ResponseEntity.status(409).body(Map.of("message", "This record was updated by another request. Refresh and try again.")); }
     @ExceptionHandler(ResponseStatusException.class)
     ResponseEntity<?> status(ResponseStatusException e) { return ResponseEntity.status(e.getStatusCode()).body(Map.of("message", e.getReason() == null ? "Request rejected." : e.getReason())); }
 }
